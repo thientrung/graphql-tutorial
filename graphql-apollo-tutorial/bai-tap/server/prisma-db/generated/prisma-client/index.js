@@ -7,16 +7,11 @@ var models = [
   {
     name: "User",
     embedded: false
-  },
-  {
-    name: "Post",
-    embedded: false
   }
 ];
 exports.Prisma = prisma_lib_1.makePrismaClientClass({
   typeDefs,
   models,
-  endpoint: `https://us1.prisma.sh/vfatrungtt3-0df8f7/prisma-db/dev`,
-  secret: `thisismysupersecrettext`
+  endpoint: `https://us1.prisma.sh/vfatrungtt3-0df8f7/prisma-db/dev`
 });
 exports.prisma = new exports.Prisma();

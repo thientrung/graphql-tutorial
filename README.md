@@ -1,396 +1,505 @@
-# #4: Database storage with Prisma
+![](./image/lesson5.png)
+Table of contents
+=================
 
-|   STT   | Nội Dung                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| :-----: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|  **I**  | [Prisma là gì?](#what)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| **II**  | [Sử dụng Prisma như thế nào?](#how) <br>&emsp;&emsp;[1. Setup](#setup)<br>&emsp;&emsp;&emsp;&emsp;[a. Install the Prisma CLI](#cli)<br>&emsp;&emsp;&emsp;&emsp;[b. Khởi tạo Prisma](#init)<br>&emsp;&emsp;&emsp;&emsp;[c. Deploy Prisma](#deploy)<br><br>&emsp;&emsp;[2. Tích hợp vào GraphQL](#integrate)<br>&emsp;&emsp;&emsp;&emsp;[a. Update datamodel](#datamodel)<br>&emsp;&emsp;&emsp;&emsp;[b. Add Prisma vào context của GraphQL server](#context) <br>&emsp;&emsp;&emsp;&emsp;[c. Query với Prisma](#query)<br>&emsp;&emsp;&emsp;&emsp;[d. Mutation với Prisma](#mutation)<br>&emsp;&emsp;&emsp;&emsp;[e. Subscription với Prisma](#sub)<br><br>&emsp;&emsp;[3. Bài tập](#homework) |
-| **III** | [Tại sao cần Prisma?](#why)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+* [Authenticate](#Authenticate)
+    * [1. Bối cảnh](#bc)
+    * [2. Đóng cửa Prisma với thế giới](#close)
+    * [3. Update lại mutation createUser với email và password](#update_email_pass)
+    * [4. Tạo mutation Login](#login)
+    * [5. Authentication Token](#auth_token)
+* [Kết quả cần đạt được](#sum)
 
-## I. Prisma là gì?<a id="what"></a>
+----
 
-![](./image/prisma.png)
+## I. Authenticate <a id="Authenticate"></a>
 
-> Về cơ bản: **Prisma** là một GraphQL **ORM** [(ORM là gì có thể tìm hiểu tại đây)](https://stackjava.com/uncategorized/orm-la-gi-tong-quan-ve-orm-framework.html).
-> Là cây cầu kết nối giữa **database** và **resolver** function của GraphQL [(nếu quên resolver function là gì thì ôn lại bài tại đây)](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson2#2-resolver-)
+### 1. Bối cảnh: <a id="bc"></a>
+- Ở bài trước [(Xem lại tại đây)](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson4) chúng ta đã setup Prisma để có thể lưu trữ database.
 
-> Prisma tuyên bố: "Prisma thay thế ORMs truyền thống!"
+- Bạn có thể thấy chúng ta có 2 điểm có thể truy cập để query và update database:
+  - URL của GraphQL server: http://localhost:4000/
+  - Endpoint của Prisma: https://us1.prisma.sh/vfatrungtt3-0df8f7/prisma-db/dev
 
-Để hiện thực lời tuyên bố của mình, Prisma đưa ra 6 tính năng nổi bật,
+<br/>
 
-chúng ta hãy cùng xem: (Typescript nha bà con :))
+> Bạn có thể truy cập đến  thông qua GraphQL server như sau: (Cách Official)
+<a id="1"></a>
 
-1. Query DB: ([Xem kỹ hơn tại đây](https://www.prisma.io/client/client-typescript/))
+![](./image/client_gql_prisma.png)
+<br/>
 
-   ```Typescript
-   // Retrieve all users
-   const allUsers: User[] = await prisma.users();
+> Bạn cũng có thể truy cập trực tiếp đến Endpoint của Prisma mà không cần thông qua GraphQL server.
 
-   // Retrieve a single user by email
-   const bob: User = await prisma.users({email: 'bob@prisma.io'});
+![](./image/client_prisma.png)
 
-   // Retrieve all comments of a post in a single request
-   const commentsOfPost: Comment[] = await prisma
-     .post({id: 'cjl4srkaqqxa30b46pqcyzpyo'})
-     .comments();
-   ```
+> Hãy thử truy cập đến Endpoint Prisma của bạn, chọn tab Schema trên playground. Bạn sẽ thấy đầy đủ các query, mutation, subscription.
+![](./image/prisma_schema.png)
 
-1. Filtering và Sorting: ([Xem kỹ hơn tại đây](https://www.prisma.io/client/client-typescript/))
 
-   ```Typescript
-   // Fetch all published posts about GraphQL by authors with Prisma-email
-   const posts: Post[] = await prisma.posts({
-     where: {
-       published: true,
-       title_contains: "GraphQL"
-       author: {
-         email_ends_with: "@prisma.io"
-       }
-     },
-     orderBy: "createdAt_ASC"
-   })
-   ```
+⚠️ ***Có thể thấy rằng với config hiện tại thì với bất cứ ai có được Endpoint của Prisma đều có thể truy cập và thay đổi DB. Điều này hết sức nguy hiểm.***
 
-1. Khai báo mới Transactions: ([Xem kỹ hơn tại đây](https://www.prisma.io/client/client-typescript/))
+✅ ***Chúng ta cần thay đổi để cho phép chạm tới DB khi và chỉ khi thông qua GraphQL server. Bằng cách khóa Prisma lại.***
 
-   ```Typescript
-   // Create a new user with two posts
-   const newUser: User = await prisma.createUser({
-     email: "alice@prisma.io",
-     posts: {
-       create: [{
-         title: "Join us for Prisma Day. June 19, Berlin!"
-       }, {
-         title: "Follow Prisma on Twitter"
-       }]
-     }
-   })
-   ```
+----
 
-1. Realtime (subscribe thay đổi của database): ([Xem kỹ hơn tại đây](https://www.prisma.io/client/client-typescript/))
+### 2. Đóng cửa Prisma với thế giới 🔐  <a id="close"></a>
+<a id="closeprisma"></a>
+- Chúng ta sẽ cài đặt Prisma với một ổ khóa để khi nào có đúng chìa khóa thì mới cho phép truy cập.
 
-   ```TypeScript
-   // Notify when any users are created, updated or deleted
-   const userAsyncIterator = prisma.$subscribe.user().node()
-   for await (const newUser of userAsyncIterator) {
-     console.log(`New user: ${newUser}`);
-   }
+> Không có key
 
-   // Get about when Gmail users are deleted
-   const userAsyncIterator = prisma.$subscribe.user({
-     where: {
-       mutation_in: ["DELETED"]
-       email_ends_with: "@gmail.com"
-     }
-   }).node()
-   ```
+![](./image/no_key.png)
+<br/>
 
-1. Native GraphQL Syntax: ([Xem kỹ hơn tại đây](https://www.prisma.io/client/client-typescript/))
+>Chúng ta septup cho GraphQLServer chứa key
 
-   ```Typescript
-   // Send a raw GraphQL query
-   const graphQLResult: any = await prisma.$graphql(`
-   query {
-     posts {
-       title
-       author { name }
-     }
-   }
-   `)
+![](./image/with_key.png)
+<br/>
 
-   // Use GraphQL fragments for field selection
-   const posts: any = await prisma
-     .posts()
-     .$fragment(`
-       fragment PostWithAuthorsAndComments on Post {
-         title
-         author { name }
-         comments { text }
-       }
-     `)
-   ```
-
-1. Datamodel: ([Xem kỹ hơn tại đây](https://www.prisma.io/client/client-typescript/))
-
-   ```Typescript
-   # Define your datamodel using declarative SDL syntax
-   type User {
-     id: ID! @id
-     email: String! @unique
-     posts: [Post!]!
-   }
-
-   type Post {
-     id: ID! @id
-     createdAt: DateTime! @createdAt
-     title: String!
-     published: Boolean! @default(value: "false")
-     author: User!
-   }
-   ```
-
-:dart: Như vậy là bạn đã hiểu sơ sơ về Prisma, giờ cùng thực hành từng bước một nào :muscle:
-
----
-
-## II. Hướng dẫn sử dụng Prisma: <a id="how"></a>
-
-🌟 Để cho đơn giản và nhanh chóng, chúng ta sẽ sử dụng database demo của Prisma cung cấp (lưu trữ trên dịch vụ đám mây Prisma Clould) thay vì sử một database ở máy local.
-⚠️ Lưu ý là Prisma có thể kết nối tới rất nhiều loại database khác nhau (mongodb, postgreSQL, mySQL...)
-
-### 1. Setup: <a id="setup"></a>
-
-#### a. Install the Prisma CLI:<a id="cli"></a>
-
-Mở terminal là run dòng lệnh sau để cài đặt
-
-```shell
- npm install -g prisma
-```
-
-#### b. Khởi tạo Prisma:<a id="init"></a>
-
-Mở terminal ở thư mục `graphql-apollo-tutorial/bai-tap/server`
-Chạy lần lượt các dòng lệnh sau
-
-```shell
- mkdir prisma-db
- cd prisma-db
- prisma init
-```
-
-Sau khi chạy console hiện lên thông báo cho phép bạn lựa chọn cách deploy Prisma.
-
-> Chọn dòng **Demo server**
-
-![](./image/prisma_init.png)
-
-Cửa sổ trình duyệt sẽ hiện lên và yêu cầu bạn đăng nhập.
-Bạn có thể đăng ký mới, hoặc sử dụng cách đăng nhập bằng github.
-Sau khi đăng nhập quay trở lại màn hình terminal là màn hình lựa chọn region: Chọn `us`.
-
-![](./image/prisma_region.png)
-
-Tiếp theo là màn hình:
-
-- Chọn tên Service.
-
-```
-Choose a name for your service (prisma-db)
-```
-
-- Chọn stage.
-
-```
-Choose a name for your stage (dev)
-```
-
-- Cuối cùng là chọn programing language để generate Prisma client cho NodeJS => Chọn **Javascript**
-
-![](./image/prisma_lang.png)
-
-#### c. Deploy: <a id="deploy"></a>
-
-Với các dòng lệnh phía trên chúng ta đã tạo ra cấu hình cơ bản Prisma dựa trên host demo database. Tiếp theo chúng ta cần tiến hành deploy cấu hình này lên host demo database bằng cách chạy lệnh sau:
-
-```shell
-prisma deploy
-```
-
-Sau khi lệnh chạy xong. Màn hình terminal như thế này là thành công.
-![](./image/prisma_deploy.png)
-Truy cập vào đường link Prisma Admin trong terminal để xem kết quả.
-![](./image/prisma_admin.png)
-
----
-
-### 2. Tích hợp vào GraphQL server của chúng ta.<a id="integrate"></a>
-
-#### a. Update datamodel <a id="datamodel"></a>
-
-- Update lại schema `User` trong file **prisma-db/datamodel.prisma**
+- **Step 1**: Update file `bai-tap/server/prisma-db/prisma.yml` thêm property `secret` *(là key ở ví dụ trên)* với string bất kỳ. Bạn có thể dùng các công cụ để auto generate để tăng tính bảo mật. Ở đây ta dùng string: **thisismysupersecrettext**
 
 ```diff
-type User {
-  id: ID! @id
-  name: String!
-+ age: Int
-+ friends: [User]
-}
-```
+endpoint: https://us1.prisma.sh/vfatrungtt3-0df8f7/prisma-db/dev
+datamodel: datamodel.prisma
++ secret: thisismysupersecrettext
 
-- Deploy lại Prisma
+generate:
+  - generator: javascript-client
+    output: ./generated/prisma-client/
 
-```
-prisma deploy
-```
-
-Check lại tại trang Prisma Admin
-![](./image/prisma_redeploy.png)
-
-- Bởi vì chúng ta vừa mới update lại datamodel của Prisma nên cần phải generate lại Prisma Client.
-
-```
-prisma generate
-```
-
-Hoặc có thể setup tại `prisma.yml` để auto generate khi deploy:
-
-```yml
 hooks:
   post-deploy:
     - prisma generate
 ```
 
-#### b. Add Prisma vào context của GraphQL server <a id="context"></a>
-
-- Update file `src/index.js`
-
-```diff
-    import { ApolloServer } from "apollo-server";
-    import typeDefs from "./schema";
-    import resolvers from "./resolvers";
-+   import { prisma } from "../prisma-db/generated/prisma-client";
-
-
-    const server = new ApolloServer({
-        typeDefs,
-        resolvers,
-+       context: req => ({
-+          prisma
-+      })
-+   });
-
-server.listen().then(({ url }) => {
-  console.log(`🚀  Server ready at ${url}`);
-});
-```
-
-🌟**Context** là đối tượng được chia sẻ cho tất cả các hàm resolver của GraphQL. Context thường được dùng để chứa những thứ dùng chung cho tất cả các query, muation như: authentication, current user, database connect, datasource ...
-
-- Chúng ta phải cài thêm thư viện Prisma cho GraphQL server
-  Chạy lệnh để cài đặt
+- **Step 2**: Deploy lại Prisma. Đứng tại folder `prisma-db` Run command:
 
 ```shell
-npm install --save prisma-client-lib
+prisma deploy
 ```
 
-#### c. Query với Prisma <a id="query"></a>
+ - **Testing**: Truy cập lại Endpoint của Prisma để test.
 
-- Ở các bài trước, chúng ta sử dụng một mảng local nằm trong file để chứa dữ liệu. Lần này chúng ta sẽ update lại các hàm resolver để tương tác thực sự với demo database bằng Prisma
-  <br>
-
-- Update lại query **users** trong file `src/resolver.js`
-
-```diff
-const resolvers = {
-    Query: {
--       users: (root, args, context, info) => users
-+       users: (root, args, context, info) => {
-+           return context.prisma.users();
-+       }
-    },
-```
-
-#### d. Mutation với Prisma <a id="mutation"></a>
-
-- Update lại query **createUser** trong file `src/resolver.js`
-
-```diff
-const resolvers = {
-  Query: {
-    users: (root, args, context, info) => users
-  },
-  Mutation: {
-    createUser: (root, args, context, info) => {
--     // Tạo mới User
--     let newUser = {
--       id: users.length + 1,
--       ...args.input
--     };
--     // Thêm vào mảng User
--     users.push(newUser);
--     pubsub.publish('CREATE_USER', { createUser: newUser });
--     return newUser;
-+     return context.prisma
-+       .createUser({
-+         ...args.input
-+       })
-+       .then(newUser => {
-+         pubsub.publish(`CREATE_USER`, {
-+           createUser: newUser
-+         });
-+         return newUser;
-+       });
-   }
-
-```
-
-🌟 Bạn có thể thấy, dựa vào datamodel chúng ta khai báo trong file `datamodel.prisma` Prisma khởi tạo cho chúng ta những hàm CRUD để sử dụng ví dụ: _createUser_, _updateUser_...
+ > Thử query và mở Schema trên Playground bạn sẽ không thể lấy kết quả được như trước nữa. Và Schema thì quay đều...
+![](./image/prisma_close.png)
 
 <br/>
 
-- Start server và test lại mutation createUser
-  - Thử request mutation createUser
-  - Check dữ liệu trên demo database bằng trang Prisma Admin
+🌟 ***Chúng ta đã khóa Prisma với thế giới***
 
-#### e. Subscription với Prisma <a id="sub"></a>
+- Hãy thử test lại với GraphQL Server.
+> Vẫn query dữ liệu được bình thường
+![](./image/local.png)
 
-- Bạn có thể thấy với ví dụ của mutation ở trên, chúng ta có thể sử dụng subscription trong Prisma bằng cách gọi hàm `pubsub.publish` trong method `then()` để gửi notification cho subscription đang lắng nghe. Như cách bình thường ở bài trước [(quên thì xem tại đây)](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson3#subscription)
-  <br>
-- 🍎 Ngoài ra Prisma còn cung cấp cho chúng ta một cách khác để sử dụng Subscription. Là sử dụng `$subscribe`._tên_model_ Với cách này chúng ta không cần mutation phải gọi hàm `pubsub.publish` để gửi notification nữa. Ví dụ:
+🤔 **Tại sao vậy?**
+- Mở file `prisma-db/prisma-client/index.js` bạn sẽ thấy `secret` đã được tự động thêm vào.
 
-  ```javascript
-  // Thông báo khi tạo mới User
-  createUser: {
-      subscribe: (root, args, context, info) => {
-          return context.prisma.$subscribe.user().node();
-      },
-      resolve: (payload, args, context, info) => {
-          return payload;
-      }
-  }
-  // Thông báo khi Update/Delete User với điều kiện age > 20
-  updateUser: {
-      subscribe: (root, args, context, info) => {
-          return context.prisma.$subscribe.user({
-              where: {
-                  mutation_in: ["DELETED", "UPDATED"]
-                  age_gt: 20
-              }
-          }).node();
-      },
-      resolve: (payload, args, context, info) => {
-          return payload;
-      }
-  }
+```diff
+exports.Prisma = prisma_lib_1.makePrismaClientClass({
+  typeDefs,
+  models,
+  endpoint: `https://us1.prisma.sh/vfatrungtt3-0df8f7/prisma-db/dev`,
++ secret: `thisismysupersecrettext`
+});
+```
+
+- Sau khi chúng ta update prisma.yml và deploy thì cần generate lại client. Nhưng chúng ta đã setup auto generate khi prisma deploy ở bài trước [(tại đây)](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson4#a-update-datamodel-) nên field `secret` đã được tự động thêm vào.
+
+- GraphQL Server sử dụng prisma-client nên sẽ có được key secret để tương tác với Prisma.
+
+----
+
+### 3. Update lại mutation createUser với email và password  <a id="update_email_pass"></a>
+
+🍎 Chúng ta sẽ update lại API **createUser** để thêm `email` và `password` phục vụ cho việc **login** chúng ta sẽ làm ở phần tiếp theo.
+
+<br/>
+
+#### a. Step 1 - Update schema
+
+Thêm 2 field `email` và `password`vào datamodel của Prisma và schema của GraphQL server
+
+> bai-tap/server/prisma-db/***datamodel.prisma***
+
+```diff
+type User {
+  id: ID! @id
+  name: String!
+  age: Int
+  friends: [User]
++ email: String! @unique
++ password: String!
+}
+
++type Post {
++  id: ID! @id
++  title: String!
++  body: String!
++  author: ID!
++}
+```
+
+> bai-tap/server/src/***schema.js***
+```diff
+type User {
+    id: ID
+    name: String
+    age: Int
+    friends: [User]
++   email: String!
++   password: String!
+}
+
++type Post {
++  id: ID!
++  title: String!
++  body: String!
++  author: ID!
++}
+```
+
+Type Post chúng ta thêm vô ở đây sẽ dùng để viết API áp dụng authentication ở phần sau. Tạm thời chưa bàn về type này.
+<br/>
+
+#### b. Step 2 - Xóa service Prisma cũ và deploy lại service với datamodel mới.
+
+- Chạy lệnh sau để xóa Prisma service
+
+    ```shell
+    prisma delete
+    ```
+    ![](./image/prisma_delete.png)
+
+<br/>
+
+- Chạy lệnh sau để deploy lại Prisma service
+
+    ```shell
+    prisma deploy
+    ```
+    ![](./image/prisma_deploy.png)
+
+
+<br/>
+
+#### c. Step 3 - Update lại schema mutation createUser.
+
+- Update schema input và response của mutation createUser:
+    File: bai-tap/server/src/schema.js
+    ```diff
+        type Mutation {
+            createUser(input: UserInput): User!
+            updateUser(id: ID!, name: String!, age: Int!): User!
+            deleteUser(id: ID!): Boolean!
+        }
+
+        input UserInput {
+            name: String!
+            age: Int!
+    +       email: String!
+    +       password: String!
+        }
+
+        type User {
+            id: ID
+            name: String
+            age: Int
+            friends: [User]
+    +       email: String!
+    +       password: String!
+        }
+    ```
+
+#### d. Step 4 - Update lại resolver method của mutation createUser.
+
+- Chúng ta sẽ sử dụng thêm thư viện: **bcryptjs** để hash password, chạy lệnh sau ở thư mục bai-tap/server để cài đặt
+  ```shell
+  npm install bcryptjs --save
   ```
+<br/>
 
-#### ⚠️ Phần Subscription này mang tính chất nâng cao, mục đích chỉ để bạn biết được Prisma có hỗ trợ Subscription rất tốt. Bạn vẫn có thể sử dụng Subscription theo kiểu cũ:
+- Update method resolver của mutation createUser:
+```diff
++ import bcrypt from "bcryptjs";
 
-- `subscription` lắng nghe event.
-- `mutation` gửi notification cho subscription.
+...
 
----
+Mutation: {
+-   createUser: (root, args, context, info) => {
+-     return context.prisma.createUser({
+-         ...args.input
+-     });
++   createUser: async (root, args, context, info) => {
++     // Check length password
++     if (args.input.password.length < 8) {
++       throw new Error("Password must be 8 characters or longer");
++     }
 
-### 3. Bài tập <a id="homework"></a>
++     // Hash password để lưu trong database
++     const password = await bcrypt.hash(args.input.password, 10);
 
-- Sử dụng Prisma để viết lại mutation updateUser và deleteUser
-  Có thể tham khảo các hàm của Prisma [tại đây](https://github.com/prisma/rfcs/blob/new-ts-client-rfc/text/0000-new-ts-client.md#basic-queries)
++     // Tạo user mới với thông tin từ input
++     // và override password string thường bằng password đã được hash
++     return context.prisma.createUser({
++       ...args.input,
++       password
++     });
++   },
+```
 
----
+#### e. Step 5 - Testing
 
-## III. Tại sao nên sử dụng? <a id="why"></a>
+-  Test với playground http://localhost:4000/.
 
-1. Simple database workflows
+Access playground và thử chạy mutation create user.
+Kết quả trả về thông tin user với password đã được hash là 🎉 OK
+![](./image/test_create_user.png)
 
-1. A realtime layer for your database
+- Check trên trang Prisma Admin để xem thử User mới đã được lưu chưa?
 
-1. End-to-end type safety
+Truy cập đến trang admin của Prisma, nếu quên URL bạn có thể mở lại file: `prisma-db/prisma.yml` thêm vào đuôi của endpoint **/_admin**
+Bạn thấy lỗi như bên dưới đúng không? :D
+![](./image/prisma_admin_error.png)
 
-1. Clean and layered architecture
+Đừng lo, bạn còn nhớ field `secret`  chúng ta đã thêm vô file prisma.yml ở phần [(2. Đóng cửa Prisma với thế giới)](#closeprisma) chứ.
+Chúng ta đã khóa cửa Prisma với thế giới rồi nên là trang admin cũng khóa theo luôn. Để truy cập trang admin như cũ chúng ta làm như sau:
+- generate token của prisma, bằng việc chạy lệnh sau ở thư mục **prisma-db**
+```
+prisma token
+```
+![](./image/prisma_token.png)
+Copy token vừa tạo vào trang admin.
+Click vào hình bánh răng để vào setting như hình bên dưới.
+![](./image/prisma_admin_token.png)
 
-Sau khi thực hành và đọc đến đây,
+Nhấn **Save changes** và refresh lại trang chúng ta đã có thể query db như cũ. Và kiểm tra User vừa mới tạo ở trên.
+![](./image/prisma_admin_test.png)
+User mới đã được lưu với password đã được hash.
 
-nếu bạn chưa hiểu tại sao nên sử dụng Prisma, xin hãy tham khảo thêm [tại đây! :muscle:](https://www.prisma.io/docs/understand-prisma/prisma-introduction-what-why-how-j9ff/#why-use-prisma)
+#### f. Homework:
+- Viết thêm 1 mutation để updatePassword. Gồm 3 tham số:
+  - email
+  - password (hiện tại)
+  - newPassword
+- Kết quả trả về là thông tin user với password mới đã được hash.
+- Phải có bước check xem email và password cũ có đúng hay không.
 
-:apple: Happy coding!
+----
+
+### 4. Tạo mutation Login <a id="login"></a>
+
+- Chúng ta sẽ sử dụng [JSON web token](https://techmaster.vn/posts/33959/khai-niem-ve-json-web-token) để xác thực.
+- Khi client login thành công server sẽ generate 1 chuỗi mã gọi là token và trả về cho client.
+- Từ đó, khi request đến các API cần xác thực, client sẽ gửi kèm token trong header của request qua đó server sẽ xác thực được.
+
+#### a. Step1: Định nghĩa Schema:
+
+- Định nghĩa mutation và các type cần thiết trong file `bai-tap/server/src/schema.js`
+
+```diff
+  type Mutation {
+    createUser(input: UserInput): User!
+    updateUser(id: ID!, name: String!, age: Int!): User!
+    deleteUser(id: ID!): Boolean!
++   login(input: LoginInput!): AuthPayload!
+  }
+
++ input LoginInput {
++   email: String!
++   password: String!
++ }
+
++ type AuthPayload {
++   token: String!
++   user: User
++ }
+```
+
+#### b. Step2: Định nghĩa method resolver cho mutation login
+
+Cài đặt thư viện **jsonwebtoken** để generate ra token, chạy lệnh sau ở thư mục bai-tap/server để cài đặt ```npm install jsonwebtoken --save```
+
+```diff
++ import jwt from "jsonwebtoken";
+
+...
+Mutation: {
++ login: async (root, args, context, info) => {
++     // Tìm kiếm user bằng email
++     const user = await context.prisma.user({
++       email: args.input.email
++     });
+
++     if (!user) {
++       throw new Error("Unable to login");
++     }
+
++     // Dùng method compare của thư viện bcrypt để verify password
++     const isMatch = await bcrypt.compare(args.input.password, user.password);
+
++     if (!isMatch) {
++       throw new Error("Unable to login");
++     }
+
++     return {
++       user,
++       token: jwt.sign({ userId: user.id }, "thisismysecret", {
++         expiresIn: "5m"
++       })
++     };
++   },
+  createUser: async (root, args, context, info) => {
+```
+
+⚠️ **CHÚ Ý RẰNG:** Chúng ta dùng hàm `sign` của thư viện jsonwebtoken để generate token. Hàm này cần ít nhất 2 parameters.
+> param1: { userId: user.id }
+param2: *"thisismysecret"*
+param3: {expiresIn: "5m"}
+
+> Cả 2 params 1 và 2 cùng dùng để generate token. Param thứ 2 còn gọi là secret key là rất quan trọng trong việc xác thực.
+
+> Kẻ xấu có thể dễ dàng có được userId để tạo ra token giả và cố gắng vượt qua lớp xác thực của hệ thống, tuy nhiên nếu không có secret key mà chỉ có userId thì không đủ. Vì vậy secret key tuyệt đối không thể để lộ ra bên ngoài.
+
+> Còn param thứ 3 là option của token. Như ví dụ trên là dùng để set thời gian hết hạn cho token.
+
+#### c. Testing
+Mở playground http://localhost:4000/ và test mutation login
+
+- Thử nhập sai password
+![](./image/test_login_fail.png)
+
+- Nhập đúng
+![](./image/test_login_success.png)
+Kết quả trả về được thông tin user và token là OK 🎉
+
+----
+
+### 5. Authentication Token <a id="auth_token"></a>
+
+Chúng ta sẽ viết 1 API mutation createPost, áp dụng authenticate token.
+Nghĩa là client phải đăng nhập => có token => thì mới có thể tạo Post mới.
+Chúng ta sẽ set token vào header: `Authorization` của request từ client.
+
+#### a. Update Context của GraphQL Server
+
+- Bới vì token được set trong header của request nên vì vậy, các mutation/query của chúng ta cần access được đến request để kiểm tra.
+Update file `bai-tap/server/src/index.js` để truyền request vào context.
+
+```diff
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+  context: req => ({
+    prisma,
++   req
+  })
+});
+```
+
+#### b. Update schema và resolver cho mutation creatPost
+
+- bai-tap/server/src/schema.js
+
+```diff
+type Mutation {
+    createUser(input: UserInput): User!
+    updateUser(id: ID!, name: String!, age: Int!): User!
+    deleteUser(id: ID!): Boolean!
+    login(input: LoginInput!): AuthPayload!
+
++   createPost(input: PostInput): Post!
+}
+
++ input PostInput {
++   title: String!
++   body: String!
++   author: ID!
++ }
+
+```
+
+- bai-tap/server/src/resolvers.js
+thêm resolver method vào mutation
+
+```javascript
+createPost: async (root, args, context, info) => {
+    return context.prisma.createPost({
+        title: args.input.title,
+        body: args.input.body,
+        author: args.input.author
+    });
+
+    return post;
+}
+```
+
+Hiện tại chỉ mới là 1 mutation thông thường.
+Chúng ta cần thêm step authentication nữa.
+
+#### c. Tạo folder utils và file getUserId.js để lấy userId từ request.
+
+- Tạo folder src/utils
+- Tạo file src/utils/getUserId.js
+
+```javascript
+import jwt from "jsonwebtoken";
+
+const getUserId = req => {
+  const header = req.req.header('authorization');
+
+  if (!header) {
+    throw new Error("Authentication required");
+  }
+
+  const token = header.replace("Bearer ", "");
+  const decoded = jwt.verify(token, "thisismysecret");
+
+  return decoded.userId;
+};
+
+export default getUserId;
+```
+
+#### d. Thêm step Authenticate cho createPost
+
+- Update file src/resolvers.js
+
+```diff
++ import getUserId from './utils/getUserId'
+...
+
+createPost: async (root, args, context, info) => {
++   const userId = getUserId(context.req)
+    return context.prisma.createPost({
+        title: args.input.title,
+        body: args.input.body,
+        author: userId
+    });
+}
+```
+
+#### e. Testing
+
+- Testing bằng playground http://localhost:4000/
+
+- Đầu tiên là login để lấy token
+![](./image/login.png)
+
+- Thử gọi mutation createPost mà không có token
+![](./image/create_post_fail.png)
+
+- Thêm token và header `Authorization` như sau: (nhớ thêm prefix `Bearer` vào phía trước token)
+![](./image/create_post_success.png)
+
+#### f. Homework
+
+- Viết mới 2 mutation updatePost và deletePost với authentication.
+
+----
+
+## II. Kết quả đạt được sau buổi học: <a id="sum"></a>
+
+- Hiểu được cơ chế Authenticate với Json Web Token
+
+- Biết được cách implement.

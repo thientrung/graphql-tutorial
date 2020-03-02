@@ -8,14 +8,14 @@ const typeDefs = gql`
   type Mutation {
     createUser(input: UserInput): User!
     updateUser(id: ID!, name: String!, age: Int!): User!
-    deleteUser(id: ID!): Boolean!
+    deleteUser(id: ID!): User!
   }
 
   type Subscription {
     count: Int!
     createUser: User!
     updateUser(userId: ID!): User!
-    deleteUser(userId: ID!): Boolean!
+    deleteUser: User!
   }
 
   input UserInput {

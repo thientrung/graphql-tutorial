@@ -7,7 +7,8 @@ const server = new ApolloServer({
   typeDefs,
   resolvers,
   context: req => ({
-    prisma
+    prisma,
+    req
   })
 });
 

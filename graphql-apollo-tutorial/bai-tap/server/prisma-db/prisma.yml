@@ -1,6 +1,5 @@
 endpoint: https://us1.prisma.sh/vfatrungtt3-0df8f7/prisma-db/dev
 datamodel: datamodel.prisma
-secret: thisismysupersecrettext
 
 generate:
   - generator: javascript-client

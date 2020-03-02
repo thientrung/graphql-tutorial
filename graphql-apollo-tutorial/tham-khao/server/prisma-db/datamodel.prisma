@@ -2,5 +2,13 @@ type User {
   id: ID! @id
   name: String!
   age: Int
-  friends: [User]
+  email: String! @unique
+  password: String!
+}
+
+type Post {
+  id: ID! @id
+  title: String!
+  body: String!
+  author: ID!
 }
