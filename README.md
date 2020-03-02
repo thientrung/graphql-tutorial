@@ -1,4 +1,4 @@
-# Workshop [GraphQL](https://graphql.org/learn/) - [Apollo](https://www.apollographql.com/)
+Î# Workshop [GraphQL](https://graphql.org/learn/) - [Apollo](https://www.apollographql.com/)
 <img src="./image/graphql.svg" width="150" height="150"><img src="./image/apollo.png" width="450" height="150">
 ### 1. Mục tiêu:
 - Có cái nhìn tổng quan và chi tiết về **GraphQL**.
@@ -16,11 +16,11 @@
 - [Visual Studio Code](https://code.visualstudio.com/)
 
 ### 4. Lộ trình:
-- ######  [Buổi 1: Introduction + Setup + Hello World](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson1)
-- ######  [Buổi 2: GraphQL's Concept - Các khái niệp cơ bản - Query](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson2)
-- ######  [Buổi 3: Mutation và Subscription](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson3)
-- ######  [Buổi 4: Database storage with Prisma](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson4)
-- ######  [Buổi 5: Authentication](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson5)
-- ######  [Buổi 6: Pagination and Sorting](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson6)
-- ######  [Buổi 7: Production deployment](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson7)
-- ######  [Buổi 8: Apollo Client and Apollo Server](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson8)
+- ######  [Buổi 1: Introduction + Setup + Hello World](https://github.com/thientrung/graphql-tutorial/tree/lesson1)
+- ######  [Buổi 2: GraphQL's Concept - Các khái niệp cơ bản - Query](https://github.com/thientrung/graphql-tutorial/tree/lesson2)
+- ######  [Buổi 3: Mutation và Subscription](https://github.com/thientrung/graphql-tutorial/tree/lesson3)
+- ######  [Buổi 4: Database storage with Prisma](https://github.com/thientrung/graphql-tutorial/tree/lesson4)
+- ######  [Buổi 5: Authentication](https://github.com/thientrung/graphql-tutorial/tree/lesson5)
+- ######  [Buổi 6: Pagination and Sorting](https://github.com/thientrung/graphql-tutorial/tree/lesson6)
+- ######  [Buổi 7: Production deployment](https://github.com/thientrung/graphql-tutorial/tree/lesson7)
+- ######  [Buổi 8: Apollo Client and Apollo Server](https://github.com/thientrung/graphql-tutorial/tree/lesson8)
