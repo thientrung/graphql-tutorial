@@ -1,9 +1,9 @@
-import {gql} from 'apollo-server';
+import { gql } from "apollo-server";
 
 const typeDefs = gql`
   type Query {
-    users: [User]!
-    posts: [Post]!
+    users(skip: Int, first: Int, orderBy: UserOrderByInput): [User]!
+    posts(skip: Int, first: Int, orderBy: PostOrderByInput): [Post]!
   }
   type Mutation {
     createUser(input: UserCreateInput): User!
@@ -64,6 +64,30 @@ const typeDefs = gql`
     title: String!
     body: String!
     author: ID!
+  }
+
+  enum UserOrderByInput {
+    id_ASC
+    id_DESC
+    name_ASC
+    name_DESC
+    age_ASC
+    age_DESC
+    email_ASC
+    email_DESC
+    password_ASC
+    password_DESC
+  }
+
+  enum PostOrderByInput {
+    id_ASC
+    id_DESC
+    title_ASC
+    title_DESC
+    body_ASC
+    body_DESC
+    author_ASC
+    author_DESC
   }
 `;
 

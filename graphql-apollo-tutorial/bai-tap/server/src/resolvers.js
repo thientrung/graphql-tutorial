@@ -1,5 +1,8 @@
 // Import module PubSub (Public Subcribe) để hỗ trợ cho subcription.
 import { PubSub } from "apollo-server";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import getUserId from "./utils/getUserId";
 
 // Khởi tạo pubsub
 const pubsub = new PubSub();
@@ -8,22 +11,113 @@ const resolvers = {
   Query: {
     users: (root, args, context, info) => {
       return context.prisma.users({ where: { NOT: [{ id: null }] } });
+    },
+    posts: (root, args, context, info) => {
+      return context.prisma.posts({ where: { NOT: [{ id: null }] } });
     }
   },
   Mutation: {
-    createUser: (root, args, context, info) => {
+    login: async (root, args, context, info) => {
+      // Tìm kiếm user bằng email
+      const user = await context.prisma.user({
+        email: args.input.email
+      });
+
+      if (!user) {
+        throw new Error("Unable to login");
+      }
+
+      // Dùng method compare của thư viện bcrypt để verify password
+      const isMatch = await bcrypt.compare(args.input.password, user.password);
+
+      if (!isMatch) {
+        throw new Error("Unable to login");
+      }
+
+      return {
+        user,
+        token: jwt.sign({ userId: user.id }, "thisismysecret", {
+          expiresIn: "30m"
+        })
+      };
+    },
+    createUser: async (root, args, context, info) => {
+      // Check length password
+      if (args.input.password.length < 8) {
+        throw new Error("Password must be 8 characters or longer");
+      }
+
+      // Hash password để lưu trong database
+      const password = await bcrypt.hash(args.input.password, 10);
+
+      // Tạo user mới với thông tin từ input
+      // và override password string thường bằng password đã được hash
       return context.prisma.createUser({
-        ...args.input
+        ...args.input,
+        password
       });
     },
-    updateUser: (root, args, context, info) => {
+    updateUser: async (root, args, context, info) => {
+      // Tìm kiếm user bằng email
+      const user = await context.prisma.user({
+        email: args.input.email
+      });
+
+      if (!user) {
+        throw new Error("Not found User!");
+      }
+
+      // Dùng method compare của thư viện bcrypt để verify password
+      const isMatch = await bcrypt.compare(args.input.password, user.password);
+
+      // Check length password
+      if (args.input.newPassword.length < 8) {
+        throw new Error("New Password must be 8 characters or longer");
+      }
+
+      const newPassword = await bcrypt.hash(args.input.newPassword, 10);
+
+      if (!isMatch) {
+        throw new Error("Username or Password not match!");
+      }
       return context.prisma.updateUser({
-        data: { name: args.name, age: args.age },
-        where: { id: args.id }
+        data: {
+          name: args.input.name,
+          age: args.input.age,
+          email: args.input.email,
+          password: newPassword
+        },
+        where: { id: args.input.id }
       });
     },
-    deleteUser: (root, args, context, info) => {
+    deleteUser: async (root, args, context, info) => {
       return await context.prisma.deleteUser({
+        id: args.id
+      });
+    },
+    createPost: async (root, args, context, info) => {
+      const userId = getUserId(context.req);
+      return await context.prisma.createPost({
+        title: args.input.title,
+        body: args.input.body,
+        author: userId
+      });
+    },
+    updatePost: async (root, args, context, info) => {
+      const userId = getUserId(context.req);
+      return context.prisma.updatePost({
+        data: {
+          title: args.input.title,
+          body: args.input.body,
+          author: userId
+        },
+        where: {
+          id: args.input.id
+        }
+      });
+    },
+    deletePost: async (root, args, context, info) => {
+      return context.prisma.deletePost({
         id: args.id
       });
     }
