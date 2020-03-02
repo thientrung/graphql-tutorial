@@ -10,10 +10,20 @@ const pubsub = new PubSub();
 const resolvers = {
   Query: {
     users: (root, args, context, info) => {
-      return context.prisma.users({ where: { NOT: [{ id: null }] } });
+      return context.prisma.users({
+        where: { NOT: [{ id: null }] },
+        skip: args.skip,
+        first: args.first,
+        orderBy: args.orderBy
+      });
     },
     posts: (root, args, context, info) => {
-      return context.prisma.posts({ where: { NOT: [{ id: null }] } });
+      return context.prisma.posts({
+        where: { NOT: [{ id: null }] },
+        skip: args.skip,
+        first: args.first,
+        orderBy: args.orderBy
+      });
     }
   },
   Mutation: {

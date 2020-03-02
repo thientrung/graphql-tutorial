@@ -4,6 +4,8 @@ import resolvers from "./resolvers";
 import { prisma } from "../prisma-db/generated/prisma-client";
 
 const server = new ApolloServer({
+  playground: true,
+  introspection: true,
   typeDefs,
   resolvers,
   context: req => ({
@@ -12,6 +14,6 @@ const server = new ApolloServer({
   })
 });
 
-server.listen().then(({ url }) => {
+server.listen({port: process.env.PORT || 4000}).then(({ url }) => {
   console.log(`🚀  Server ready at ${url}`);
 });

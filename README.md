@@ -1,278 +1,236 @@
-![](./image/paging_sorting_logo.png)
+![](./image/Product_Deployment.png)
 
 # Table of contents
 
-- [Pagination](#page)
-- [Sorting](#sort)
-- [Kết quả cần đạt được](#sum)
+- [Deploy Nodejs Application (GraphQL Server)](#1)
+  - [a. Prepare Heroku](#prepare)
+  - [b. Config Lại GraphQL Server](#config)
+  - [c. Bắt đầu deploy](#deploy)
+- [Summary](#Summary)
 
 ---
 
-# <a id="page">I. Pagination:</a>
+### 1. Deploy Nodejs Application (GraphQL Server): <a id="1"></a>
 
-Thường có 2 cách để pagination là
+Hiện tại chúng ta đang chạy **GraphQL Server** ở máy local.
+Chỉ có **Prisma service** và **Database** là sử dụng dịch vụ và clould-db của Prisma.
 
-- Limit-Offset (cơ bản) ([tài liệu tham khảo](https://www.howtographql.com/graphql-js/8-filtering-pagination-and-sorting/))
-- Cursor-based (nâng cao) ([tài liệu tham khảo](https://www.prisma.io/docs/1.34/prisma-client/basic-data-access/reading-data-JAVASCRIPT-rsc2/#pagination))
+Việc cần làm ở bài này là deploy GraphQL Server lên máy chủ nào đó. Để chúng ta có được một Application thực sự có thể truy cập từ bất cứ đâu và bất cứ khi nào.
 
-> :tada: Tin mừng là Prisma support cả 2 loại pagination này (đọc tài liệu tham khảo để biết thêm chi tiết).
+Chúng ta sẽ sử dụng [Heroku](https://www.heroku.com/what "Heroku is a cloud platform that lets companies build, deliver, monitor and scale apps — we're the fastest way to go from idea to URL, bypassing all those infrastructure headaches.") để deploy.
 
-:dart: Lần này, chúng ta sẽ thực hành pagination cơ bản **Limit-Offset** với Prisma.
+#### a. Prepare Heroku <a id="prepare"></a>
 
-> :warning: Nâng cao:
->
-> - [Dùng queryBuilder của TypeORM để pagination như thế nào?](https://github.com/typeorm/typeorm/blob/master/docs/select-query-builder.md#using-pagination)
-> - [Hướng dẫn thực hành cursor-based pagination?](https://blog.apollographql.com/tutorial-pagination-d1c3b3ee2823)
+Chạy lệnh sau để cài đặt heroku-cli
 
-## 1. Limit-Offset là gì?
-
-:point_up: Để hiểu khái niệm Limit-Offset, hãy quan sát câu query sau đây:
-
-```sql
-SELECT
- employee_id, first_name, last_name
-FROM
- employees
-ORDER BY first_name
-LIMIT 5 OFFSET 3;
+```shell
+npm install -g heroku
 ```
 
-:point_up: nghĩa là:
+Trong lúc đợi cài đặt xong hãy đăng ký 1 tài khoản heroku: https://www.heroku.com/ như sau, (_nhớ dùng email và tên của bạn_ 🙄):
 
-![](./image/lesson6-Limit-Offset.png)
+![](./image/heroku_signup.png)
 
-:point_right: Quay lại với GraphQL,
+Chờ email xác nhận và cài đặt mật khẩu.
 
-:point_right: Prisma API gọi `limit` là `first`, còn `offset` là `skip`:
+Sau khi cài đặt Heroku-CLI và đăng ký tài khoản thành công.
+Đăng nhập thử bằng lệnh dưới đây xem sao 🧐
 
-> - `first` là số element muốn lấy ra.
-> - `skip` là số index của element đầu tiên muốn lấy
+```shell
+heroku login
+```
 
-## 2. Thực hành Limit-Offset với 3 steps
+![](./image/herokulogin.png)
 
-### Step 1: Chuẩn bị dữ liệu đủ nhiều để pagination `prisma seed`
+Như hình trên là thành công 🎉 🎊
 
-:apple: Prisma hỗ trợ chúng ta có thể tạo sẵn dữ liệu bằng câu lệnh `prisma seed`
+<br/>
 
-- Tạo mới file `prisma-db/data/seed.js` với nội dung:
+#### b. Config Lại GraphQL Server: <a id="config"></a>
 
-  ```javascript
-  const {prisma} = require('../generated/prisma-client');
+##### Update lại file `graphql-apollo-tutorial/bai-tap/server/src/index.js`
 
-  async function main() {
-    // Tạo mới 50 users
-    const times = 50;
-    for (let i = 1; i <= times; i++) {
-      // Dùng hàm createUser của prisma
-      await prisma.createUser({
-        id: i,
-        name: `user${i}`,
-        age: i + 20,
-        email: `user${i}@email.com`,
-        password: '12345678',
-      });
-    }
-  }
+```diff
+- server.listen().then(({ url }) => {
++ server.listen({port: process.env.PORT || 4000}).then(({ url }) => {
+  console.log(`🚀  Server ready at ${url}`);
+});
+```
 
-  main().catch((e) => console.error(e));
-  ```
+🤔 **Vì sao lại cần update lại port của GraphQL Server?**
 
-- Sửa file `prisma-db/prisma.yml` như sau:
+- Mặc định của GraphQL server là sẽ dùng port 4000. Nên từ bài đầu tới giờ chúng ta không hề config port của server những vẫn có thể access từ link: http://localhost:4000
 
-  ```diff
-  # Sửa endpoint thành endpoint của bạn
-  +endpoint: https://us1.prisma.sh/vfaanhtq-136780/prisma-db/dev/
-  datamodel: datamodel.prisma
-  # Sửa secret key thành secret key của bạn
-  +secret: thisismysupersecrettext
+- Tuy nhiên Khi deploy lên heroku chúng ta không thể sử dụng port 4000 được nữa mà phải chuyển sang sử dụng port do heroku cung cấp thông qua **process.env.PORT**.
 
-  generate:
-    - generator: javascript-client
-      output: ./generated/prisma-client/
+##### Update lại file `graphql-apollo-tutorial/bai-tap/server/package.json`
 
-  # Thêm dòng này để run prisma seed
-  +seed:
-  + run: node ./data/seed.js
+```diff
+"scripts": {
+    "test": "jest",
+-   "start": "nodemon --exec babel-node src/index.js",
++   "dev": "nodemon --exec babel-node src/index.js",
++   "start": "node dist/index.js",
++   "heroku-postbuild": "babel src --out-dir dist --copy-files",
+    "start:ci": "node --exec babel-node src/index.js"
+},
+```
 
-  hooks:
-    post-deploy:
-      - prisma generate
-      # Thêm dòng này để tự động seed data khi run prisma deploy
-  +   - prisma seed
-  ```
+⁉️ **Vì sao cần phải update lại scripts của package.json**
 
-- Clear prisma và deploy lại
+**Thứ 1**:
 
-  Đứng ở thư mục: `server/prisma-db/` run câu lệnh
+- `nodemon` không thích hợp dùng cho bản production, chỉ được dùng để phục vụ cho quá trình develop.
+- Và mặc định heroku sẽ sử dụng câu lệnh `start` để run app của chúng ta. Vì vậy chúng ta cần phải đổi tên câu lệnh `start` ban đầu thành `dev` _(hoặc tên khác tùy bạn)_.
+
+**Thứ 2**:
+
+- GraphQL server của chúng ta sử dụng rất nhiều syntax mới của ES6. Để đảm bảo cho việc hoạt động ổn định trên server. Ta sẽ sử dụng babel để build lại source. Cần cài thêm vài module: @babel/pollyfill và @babel/runtime... đã được update trong package.json. Bạn cần phải chạy lại lệnh `npm install`.
+- `heroku-postbuild` là câu lệnh dùng để build của heroku sẽ được thực hiện khi bạn tiến hành deploy. [Xem thêm tại đây](https://devcenter.heroku.com/articles/nodejs-support#customizing-the-build-process)
+- Và câu lệnh `start` sẽ update lại gọi file trong thư mục được build **dist**:
+  `"start": "node dist/index.js"`
+
+<br/>
+
+#### c. Bắt đầu deploy lên Heroku thôi: <a id="deploy"></a>
+
+- Chạy câu sau để khởi tạo 1 application
 
   ```shell
-  prisma delete && prisma deploy
+  heroku create
   ```
 
-  Sau khi run thành công, bạn sẽ thấy có 50 users được tạo như ảnh:
+  ![](./image/herokucreate.png)
 
-  ![](./image/lesson6-seed-50-users.png)
+  `blooming-gorge-63644` là tên của được tự động tạo ra ngẫu nhiên.
 
-### Step 2: Thử từ khoá `first` (limit) và `skip` (offset) với prisma cloud
+- Chạy lệnh sau để Setting buildpack cho heroku
 
-Hãy thử viết câu query và run như trong ảnh:
+  ```shell
+  heroku buildpacks:set heroku/nodejs
+  ```
 
-![](./image/lesson6-limit-offset-with-prisma-cloud.png)
+* Bạn click vào đường link để xem app của mình. _(ở đây là: https://blooming-gorge-63644.herokuapp.com/)_ Hiện tại bạn sẽ chỉ thấy 1 empty app như hình sau:
 
-:dart: thật dễ phải không nào :smile:
+  ![](./image/herokuempty.png)
 
-### Step 3: Dùng từ khoá `first` và `skip` với graphql server 4000
+* Việc deploy về bản chất chỉ là chúng ta push code lên repository của heroku. Bạn có thể thấy link git của heroku khi chúng ta khởi tạo app.
+  _https://git.heroku.com/blooming-gorge-63644.git_
 
-- Sửa `server/src/schema.js`
+- Chúng ta cần phải tạo 1 repo khác dùng cho deploy. Bởi vì cấu trúc thư mục của repo hiện tại không phù hợp để deploy.
+  Copy nội dung thư mục `bai-tap/server` ra thư mục mới (**graphql-apollo-deploy**) nằm cùng cấp với folder `graphql-apollo`. Cấu trúc thư mục sẽ như sau:
 
-```diff
-  type Query {
--   users: [User]!
-+   users(skip: Int, first: Int): [User]!
-  }
-```
+  ```
+  +--graphql-apollo
+  |       |
+  |       +--graphql-apollo-tutorial
+  |       |       |
+  |       |       +--bai-tap/server
+  |       |       |
+  |       |       +--tham-khao/server
+  |       |
+  |       +--image
+  |       +--README.md
+  |
+  +--graphql-apollo-deploy
+          |
+          +--dist
+          |
+          +--node_modules
+          |
+          +--prisma-db
+          |
+          +--src
+          |
+          +--package.json
+  ```
 
-- Sửa `server/src/resolvers.js`
+- Đứng ở thư mục **`graphql-apollo-deploy`** chạy lệnh:
 
-```diff
-Query: {
-    users: (root, args, context, info) => {
--     return context.prisma.users({where: {NOT: [{id: null}]}});
-+     return context.prisma.users({
-+       where: {NOT: [{id: null}]},
-+       skip: args.skip,
-+       first: args.first,
-+     });
-    },
-  },
-```
+  ```
+  git init
+  ```
 
-- Khởi động graphql server 4000 và query thử với pagination
+- Add link này như là 1 git remote bằng câu lệnh sau
 
-Chuyển con trỏ đến thư mục: `bai-tap/server` và run
+  ```
+  git remote add heroku https://git.heroku.com/blooming-gorge-63644.git
+  ```
 
-```
-npm i && npm start
-```
+  Dùng lệnh `git remote -v` để check kết quả
 
-sau khi thành công sẽ nhìn thấy như hình:
+  ![](./image/gitremote.png)
 
-![](./image/lesson6-start-graphql-server-pagination.png)
+  Như hình trên là thành công
 
-- Mở http://localhost:4000 và gõ câu query `users` và nhận kết quả như hình sau:
+- Gõ lệnh add để thêm các file chưa được track.
 
-![](./image/lesson6-graphql-server-users-limit-offset.png)
+  ```
+  git add .
+  ```
 
-:tada: Chúc mừng bạn đã pagination thành công!
+- Gõ lệnh để commit.
 
-## 3. Bài tập về nhà
+  ```
+  git commit -m "Prepare to deploy"
+  ```
 
-Viết câu query `posts` ([tham khảo](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/blob/lesson5/graphql-apollo-tutorial/tham-khao/server/src/resolvers.js#L15-L17)) nhưng có pagination (nhớ seed nhiều nhiều data để còn test nha :smile:)
+- Bước cuối cùng push lên remote heroku để deploy
 
-# <a id="sort">II. Sorting: `orderBy`</a>
+  ```
+  git push heroku master
+  ```
 
-Nhắc đến sorting, chắc hẳn không thể không nghĩ tới từ khoá `orderBy`, Và:
+  > :warning: **Nâng cao:** _bạn có thể dùng git lồng trong git để deploy heroku mà không cần phải tách cấu trúc thư mục._
 
-:tada: Tin mừng là Prisma đã hỗ trợ sẵn cho chúng ta từ khoá `orderBy` trong câu query!
+- Truy cập lại link app để test https://blooming-gorge-63644.herokuapp.com/ bạn sẽ truy cập được playground thay vì empty app nữa. Tuy nhiên bạn không thể query gì được cả.
 
-> :warning: Nâng cao: [Dùng queryBuilder của TypeORM để sorting như thế nào?](https://github.com/typeorm/typeorm/blob/master/docs/select-query-builder.md#adding-order-by-expression)
+<br/>
 
-Hãy xem file `server/prisma-db/generated/prisma-schema.js`
+- Update lại file `src/index.js` thêm 2 config ở dưới.
 
-```typescript
-type Query {
+  ```diff
+  const server = new ApolloServer({
+  + playground: true,
+  + introspection: true,
+    typeDefs,
+    resolvers,
+    context: req => ({
+      prisma,
+      req
+    })
+  });
+  ```
 
-  # Prisma đã tạo sẵn cho chúng ta từ khoá `orderBy` khi run `prisma generate`
-  users(where: UserWhereInput, orderBy: UserOrderByInput, skip: Int, after: String, before: String, first: Int, last: Int): [User]!
-}
+- Chạy lại các lệnh git để deploy
 
-# Tự động generate đầy đủ sorting theo các thuộc tính
-enum UserOrderByInput {
-  id_ASC
-  id_DESC
-  name_ASC
-  name_DESC
-  age_ASC
-  age_DESC
-  email_ASC
-  email_DESC
-  password_ASC
-  password_DESC
-}
-```
+  ```
+  git add .
+  git commit -m "Prepare to deploy"
+  git push heroku master
+  ```
 
-:apple: Vì thế, việc của chúng ta chỉ là sử dụng nó!
+- Check lại App.
 
-## 1. Thử `orderBy` với prisma cloud
+  ![](./image/deploysucess.png)
 
-Hãy gõ câu query và run như trong ảnh
+  🎉 🎉 🎉 Vậy là deploy thành công. Chúng ta đã có 1 GraphQL Server Production. Có thể truy cập ở bất cứ đâu.
 
-![](./image/lesson6-sorting-prisma-cloud.png)
+---
 
-## 2. Thực hiện `orderBy` với graphql server 4000 với 3 steps
+### 2. Tóm tắt lại kiến thức đã học: <a id="Summary"></a>
 
-- Step 1: sửa `server/src/schema.js`
+Vậy là chúng ta đã cùng nhau đi được hơn 1 nửa chặng đường:
 
-```diff
-  type Query {
--   users(skip: Int, first: Int): [User]!
-+   users(skip: Int, first: Int, orderBy: UserOrderByInput): [User]!
-  }
+- Chúng ta đã biết được GraphQL là gì, các khái niệm cơ bản của GraphQL và Query ở [lesson2](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson2)
+- Cùng nhau tìm hiểu về Mutation và Subscription ở [lesson3](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson3)
+- Tương tác trực tiếp với DB ở [lesson4](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson4)
+- Authentication ở [lesson5](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson5)
+- Pagination và Sorting ở [lesson6](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson6)
+- Và ở bài này chúng ta đã biết cách build và deploy 1 bản production.
 
-+ enum UserOrderByInput {
-+   id_ASC
-+   id_DESC
-+   name_ASC
-+   name_DESC
-+   age_ASC
-+   age_DESC
-+   email_ASC
-+   email_DESC
-+   password_ASC
-+   password_DESC
-+ }
-```
+Vậy là bạn đã biết gần như đầy đủ các kiến thức cơ bản về GraphQL rồi đấy.
 
-- Step 2: sửa `server/src/resolvers.js`
+- Trong 2 lesson tới (lesson8 và lesson9), chúng ta sẽ sử dụng những kiến thức đã được học từ đầu đến giờ và sử dụng 1 Platform hỗ trợ GraphQL rất nổi tiếng là Apollo để cùng nhau tạo 1 sản phẩm cụ thể ở đây là 1 forum, có các chức năng: như đăng bài, comment, chat...
 
-```diff
-Query: {
-    users: (root, args, context, info) => {
-      return context.prisma.users({
-        where: {NOT: [{id: null}]},
-        skip: args.skip,
-        first: args.first,
-+       orderBy: args.orderBy,
-      });
-    },
-  },
-```
-
-- Step 3: Khởi động graphql server 4000 và query thử với sorting
-
-Chuyển con trỏ đến thư mục: `bai-tap/server` và run
-
-```
-npm start
-```
-
-sau khi thành công sẽ nhìn thấy như hình:
-
-![](./image/lesson6-start-graphql-server-sorting.png)
-
-- Mở http://localhost:4000 và gõ câu query `users` và nhận kết quả như hình sau:
-
-![](./image/lesson6-graphql-server-users-sorting.png)
-
-:tada: Chúc mừng bạn đã sorting bằng `orderBy` thành công!
-
-## 3. Bài tập về nhà
-
-Viết câu query `posts` ([tham khảo](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/blob/lesson5/graphql-apollo-tutorial/tham-khao/server/src/resolvers.js#L15-L17)) nhưng có sorting (nhớ seed nhiều nhiều data để còn test nha :smile:)
-
-⚠️ Chú ý: Endpoint prisma của bạn có thể sẽ khác với trong source bai-tap. Nếu không deploy hay delete được prisma. Mở lại file: `graphql-apollo-tutorial/bai-tap/server/prisma-db/prisma.yml` và update lại endpoint cho đúng.
-
-# <a id="sum">III. Kết quả đạt được sau buổi học:</a>
-
-- Hiểu được Pagination có những loại nào, và thực hành được cơ bản Limit-Offset
-- Hiểu được Sorting, và thực hành được cơ bản với `orderBy`
+Bạn đã sẵn sàng. 💪
