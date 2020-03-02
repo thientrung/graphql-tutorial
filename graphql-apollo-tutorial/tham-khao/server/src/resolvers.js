@@ -1,5 +1,6 @@
 // Import module PubSub (Public Subcribe) để hỗ trợ cho subcription.
 import { PubSub } from "apollo-server";
+
 // Khởi tạo pubsub
 const pubsub = new PubSub();
 
@@ -23,48 +24,26 @@ let users = [
 
 const resolvers = {
   Query: {
-    users: (root, args, context, info) => users
+    users: (root, args, context, info) => {
+      return context.prisma.users({ where: { NOT: [{ id: null }] } });
+    }
   },
   Mutation: {
     createUser: (root, args, context, info) => {
-      // Tạo mới User
-      let newUser = {
-        id: users.length + 1,
+      return context.prisma.createUser({
         ...args.input
-      };
-      // Thêm vào mảng User
-      users.push(newUser);
-
-      return newUser;
+      });
     },
     updateUser: (root, args, context, info) => {
-      // Kiểm tra sự tồn tại của user
-      const userIndex = users.findIndex(user => user.id == args.id);
-
-      // Trả về lỗi nếu không tồn tại
-      if (userIndex === -1) {
-        throw new Error("User not found!");
-      }
-
-      // Tiến hành update user trong mảng.
-      users[userIndex].age = args.age;
-      users[userIndex].name = args.name;
-      // Send notice tới event đang được subscription theo id
-      pubsub.publish(`UPDATE_USER_${args.id}`, { updateUser: users[userIndex] });
-      // Trả user đã update về lại cho client
-      return users[userIndex];
+      return context.prisma.updateUser({
+        data: { name: args.name, age: args.age },
+        where: { id: args.id }
+      });
     },
     deleteUser: (root, args, context, info) => {
-      // Kiểm tra sự tồn tại của user
-      const userIndex = users.findIndex(user => user.id == args.id);
-
-      if (userIndex === -1) {
-        throw new Error("User not found!");
-      }
-
-      users.splice(userIndex, 1);
-
-      return true;
+      return await context.prisma.deleteUser({
+        id: args.id
+      });
     }
   },
   Subscription: {
@@ -86,18 +65,42 @@ const resolvers = {
         return pubsub.asyncIterator("Count-LabelEvent");
       }
     },
-    updateUser: {
+    createUser: {
       subscribe: (root, args, context, info) => {
-        // Kiểm tra sự tồn tại của user
-        const userIndex = users.findIndex(user => user.id == args.userId);
-
-        // Trả về lỗi nếu không tồn tại
-        if (userIndex === -1) {
-          throw new Error("User not found!");
-        }
-        // asyncIterator là function dùng để listen event async.
-        // Chúng ta sẽ lắng nghe event update tới userId nhất định.
-        return pubsub.asyncIterator(`UPDATE_USER_${args.userId}`);
+        return context.prisma.$subscribe.user().node();
+      }
+    },
+    updateUser: {
+      // Subscription với Prisma, điều kiện là khi UPDATE user với age > 20
+      subscribe: (root, args, context, info) => {
+        return context.prisma.$subscribe
+          .user({
+            where: {
+              mutation_in: ["UPDATED"]
+            },
+            node: { id: args.userId }
+          })
+          .node();
+      },
+      resolve: (payload, args, context, info) => {
+        return payload;
+      }
+    },
+    deleteUser: {
+      subscribe: (root, args, context, info) => {
+        return context.prisma.$subscribe
+          .user(
+            {
+              where: {
+                mutation_in: ["DELETED"]
+              }
+            },
+            info
+          )
+          .previousValues();
+      },
+      resolve: (payload, args, context, info) => {
+        return payload;
       }
     }
   }

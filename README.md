@@ -1,309 +1,396 @@
-# #3. Mutation - Subscription
+# #4: Database storage with Prisma
 
-|   STT   | Nội Dung                                                                                                                            |
-| :-----: | ----------------------------------------------------------------------------------------------------------------------------------- |
-|  **I**  | [Mutation](#mutation)<br> &emsp; [1. Khái niệm](#def_mutate)<br>&emsp; [2. Thực hành](#use_mutate)<br>&emsp; [3. Bài tập](#btM)     |
-| **II**  | [Subscription](#subscription)<br> &emsp; [1. Khái niệm](#def_subs)<br>&emsp; [2. Thực hành](#use_subs)<br>&emsp; [3. Bài tập](#btS) |
-| **III** | [Mục tiêu cần đạt được](#summary)                                                                                                   |
+|   STT   | Nội Dung                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| :-----: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|  **I**  | [Prisma là gì?](#what)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **II**  | [Sử dụng Prisma như thế nào?](#how) <br>&emsp;&emsp;[1. Setup](#setup)<br>&emsp;&emsp;&emsp;&emsp;[a. Install the Prisma CLI](#cli)<br>&emsp;&emsp;&emsp;&emsp;[b. Khởi tạo Prisma](#init)<br>&emsp;&emsp;&emsp;&emsp;[c. Deploy Prisma](#deploy)<br><br>&emsp;&emsp;[2. Tích hợp vào GraphQL](#integrate)<br>&emsp;&emsp;&emsp;&emsp;[a. Update datamodel](#datamodel)<br>&emsp;&emsp;&emsp;&emsp;[b. Add Prisma vào context của GraphQL server](#context) <br>&emsp;&emsp;&emsp;&emsp;[c. Query với Prisma](#query)<br>&emsp;&emsp;&emsp;&emsp;[d. Mutation với Prisma](#mutation)<br>&emsp;&emsp;&emsp;&emsp;[e. Subscription với Prisma](#sub)<br><br>&emsp;&emsp;[3. Bài tập](#homework) |
+| **III** | [Tại sao cần Prisma?](#why)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
-<br>
+## I. Prisma là gì?<a id="what"></a>
 
-## I. Mutation - GraphQL <a id="mutation"></a>
+![](./image/prisma.png)
 
-### 1. Khái niệm: <a id="def_mutate"></a>
+> Về cơ bản: **Prisma** là một GraphQL **ORM** [(ORM là gì có thể tìm hiểu tại đây)](https://stackjava.com/uncategorized/orm-la-gi-tong-quan-ve-orm-framework.html).
+> Là cây cầu kết nối giữa **database** và **resolver** function của GraphQL [(nếu quên resolver function là gì thì ôn lại bài tại đây)](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson2#2-resolver-)
 
-- **Mutation type** là nơi phục vụ cho việc thay đổi database, tương tự method `POST`, `PUT` và `DELETE` của REST API. Giống như `Query`, `Mutation` cũng là một loại đối tượng đặt biệt trong GraphQL.
-- **Lưu ý**: với REST API có 3 method hỗ trợ thay đổi database là CREATE, UPDATE và DELETE, nhưng với GraphQL chỉ dùng duy nhất khái niệm Mutation - đại diện cho 3 method trên.
+> Prisma tuyên bố: "Prisma thay thế ORMs truyền thống!"
 
-### 2. Thực hành: <a id="use_mutate"></a>
+Để hiện thực lời tuyên bố của mình, Prisma đưa ra 6 tính năng nổi bật,
 
-#### A. Chuẩn bị:
+chúng ta hãy cùng xem: (Typescript nha bà con :))
 
-Trước khi bắt đầu thực hành **Mutation**, xin nhắc lại là ở [bài 2 Query](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lession2#query) lần trước chúng ta đã dùng dữ liệu giả cố định để trả về.
+1. Query DB: ([Xem kỹ hơn tại đây](https://www.prisma.io/client/client-typescript/))
 
-Lần này thực hành với **Mutation** chúng ta sẽ sử dụng 1 mảng các `User` để thay thế cho 1 database thực tế và để có thể dễ dàng thấy sự thay đổi của data.
+   ```Typescript
+   // Retrieve all users
+   const allUsers: User[] = await prisma.users();
 
-Vì vậy chúng ta sẽ update lại 1 chút phần **query** ở bài trước. Vào thư mục bai-tap/server tiến hành theo các bước sau:
+   // Retrieve a single user by email
+   const bob: User = await prisma.users({email: 'bob@prisma.io'});
 
-- Step 1: **src/schema.js** update lại `tên`, `tham số` và `kiểu dữ liệu trả về` của query user
+   // Retrieve all comments of a post in a single request
+   const commentsOfPost: Comment[] = await prisma
+     .post({id: 'cjl4srkaqqxa30b46pqcyzpyo'})
+     .comments();
+   ```
 
-| Cũ                                                  | Mới                                                          |
-| --------------------------------------------------- | ------------------------------------------------------------ |
-| type Query { <br> &emsp; user(id: ID!): User! <br>} | type Query { <br> &emsp; user**s**: **[** User **]** ! <br>} |
+1. Filtering và Sorting: ([Xem kỹ hơn tại đây](https://www.prisma.io/client/client-typescript/))
 
-- Step 2: **src/resolver.js**
+   ```Typescript
+   // Fetch all published posts about GraphQL by authors with Prisma-email
+   const posts: Post[] = await prisma.posts({
+     where: {
+       published: true,
+       title_contains: "GraphQL"
+       author: {
+         email_ends_with: "@prisma.io"
+       }
+     },
+     orderBy: "createdAt_ASC"
+   })
+   ```
 
-Thêm mảng users vào đầu file:
+1. Khai báo mới Transactions: ([Xem kỹ hơn tại đây](https://www.prisma.io/client/client-typescript/))
 
-```javascript
-let users = [
-  {
-    id: 1,
-    name: "Jone",
-    age: 20
-  },
-  {
-    id: 2,
-    name: "Aily",
-    age: 25
-  },
-  {
-    id: 3,
-    name: "Mina",
-    age: 30
-  }
-];
+   ```Typescript
+   // Create a new user with two posts
+   const newUser: User = await prisma.createUser({
+     email: "alice@prisma.io",
+     posts: {
+       create: [{
+         title: "Join us for Prisma Day. June 19, Berlin!"
+       }, {
+         title: "Follow Prisma on Twitter"
+       }]
+     }
+   })
+   ```
+
+1. Realtime (subscribe thay đổi của database): ([Xem kỹ hơn tại đây](https://www.prisma.io/client/client-typescript/))
+
+   ```TypeScript
+   // Notify when any users are created, updated or deleted
+   const userAsyncIterator = prisma.$subscribe.user().node()
+   for await (const newUser of userAsyncIterator) {
+     console.log(`New user: ${newUser}`);
+   }
+
+   // Get about when Gmail users are deleted
+   const userAsyncIterator = prisma.$subscribe.user({
+     where: {
+       mutation_in: ["DELETED"]
+       email_ends_with: "@gmail.com"
+     }
+   }).node()
+   ```
+
+1. Native GraphQL Syntax: ([Xem kỹ hơn tại đây](https://www.prisma.io/client/client-typescript/))
+
+   ```Typescript
+   // Send a raw GraphQL query
+   const graphQLResult: any = await prisma.$graphql(`
+   query {
+     posts {
+       title
+       author { name }
+     }
+   }
+   `)
+
+   // Use GraphQL fragments for field selection
+   const posts: any = await prisma
+     .posts()
+     .$fragment(`
+       fragment PostWithAuthorsAndComments on Post {
+         title
+         author { name }
+         comments { text }
+       }
+     `)
+   ```
+
+1. Datamodel: ([Xem kỹ hơn tại đây](https://www.prisma.io/client/client-typescript/))
+
+   ```Typescript
+   # Define your datamodel using declarative SDL syntax
+   type User {
+     id: ID! @id
+     email: String! @unique
+     posts: [Post!]!
+   }
+
+   type Post {
+     id: ID! @id
+     createdAt: DateTime! @createdAt
+     title: String!
+     published: Boolean! @default(value: "false")
+     author: User!
+   }
+   ```
+
+:dart: Như vậy là bạn đã hiểu sơ sơ về Prisma, giờ cùng thực hành từng bước một nào :muscle:
+
+---
+
+## II. Hướng dẫn sử dụng Prisma: <a id="how"></a>
+
+🌟 Để cho đơn giản và nhanh chóng, chúng ta sẽ sử dụng database demo của Prisma cung cấp (lưu trữ trên dịch vụ đám mây Prisma Clould) thay vì sử một database ở máy local.
+⚠️ Lưu ý là Prisma có thể kết nối tới rất nhiều loại database khác nhau (mongodb, postgreSQL, mySQL...)
+
+### 1. Setup: <a id="setup"></a>
+
+#### a. Install the Prisma CLI:<a id="cli"></a>
+
+Mở terminal là run dòng lệnh sau để cài đặt
+
+```shell
+ npm install -g prisma
 ```
 
-Update function resolver để trả về mảng user thay vì data giả cố định.
+#### b. Khởi tạo Prisma:<a id="init"></a>
 
-Cũ:
+Mở terminal ở thư mục `graphql-apollo-tutorial/bai-tap/server`
+Chạy lần lượt các dòng lệnh sau
 
-```javascript
-const resolvers = {
-  Query: {
-    user: (root, args, context, info) => ({
-      id: args.id,
-      name: `TrungTT-${args.id}`,
-      age: 25
-    })
-  }
+```shell
+ mkdir prisma-db
+ cd prisma-db
+ prisma init
 ```
 
-Mới:
+Sau khi chạy console hiện lên thông báo cho phép bạn lựa chọn cách deploy Prisma.
 
-```javascript
-const resolvers = {
-  Query: {
-    user: (root, args, context, info) => users
-  }
-```
+> Chọn dòng **Demo server**
 
-#### B. Thực hành thôi.
+![](./image/prisma_init.png)
 
-Giả định bài toán của chúng ta như sau: Có 1 mảng các user với id, name và age. Yêu cầu có 1 API tìm ra và update object tương ứng với id truyền vào, sau đó trả ra user đã được update. Các bước làm như sau:
+Cửa sổ trình duyệt sẽ hiện lên và yêu cầu bạn đăng nhập.
+Bạn có thể đăng ký mới, hoặc sử dụng cách đăng nhập bằng github.
+Sau khi đăng nhập quay trở lại màn hình terminal là màn hình lựa chọn region: Chọn `us`.
 
-- Step 1: Thêm type Mutation trong file **src/schema.js**
+![](./image/prisma_region.png)
 
-```javascript
-    type Mutation {
-        updateUser(id: ID!, name: String!, age: Int!): User!
-    }
-```
+Tiếp theo là màn hình:
 
-- Step 2: Implement resolver function trong file **src/resolver**
-
-```javascript
-const resolvers = {
-  Mutation: {
-    updateUser: (root, args, context, info) => {
-      // Kiểm tra sự tồn tại của user trong mảng.
-      const userIndex = users.findIndex(user => user.id == args.id);
-
-      // Trả về lỗi nếu không tồn tại
-      if (userIndex === -1) {
-        throw new Error("User not found!");
-      }
-
-      // Tiến hành update user trong mảng.
-      users[userIndex].age = args.age;
-      users[userIndex].name = args.name;
-
-      // Trả user đã update về lại cho client
-      return users[userIndex];
-    }
-  }
-};
-```
-
-- Run lại server và test:
+- Chọn tên Service.
 
 ```
-npm start
+Choose a name for your service (prisma-db)
 ```
 
-- Mở http://localhost:4000/ và viết câu mutation của bạn vào để kiểm tra:
+- Chọn stage.
 
-```graphql
-mutation {
-  updateUser(id: 1, name: "Scofield", age: 20) {
-    id
-    name
-    age
-  }
+```
+Choose a name for your stage (dev)
+```
+
+- Cuối cùng là chọn programing language để generate Prisma client cho NodeJS => Chọn **Javascript**
+
+![](./image/prisma_lang.png)
+
+#### c. Deploy: <a id="deploy"></a>
+
+Với các dòng lệnh phía trên chúng ta đã tạo ra cấu hình cơ bản Prisma dựa trên host demo database. Tiếp theo chúng ta cần tiến hành deploy cấu hình này lên host demo database bằng cách chạy lệnh sau:
+
+```shell
+prisma deploy
+```
+
+Sau khi lệnh chạy xong. Màn hình terminal như thế này là thành công.
+![](./image/prisma_deploy.png)
+Truy cập vào đường link Prisma Admin trong terminal để xem kết quả.
+![](./image/prisma_admin.png)
+
+---
+
+### 2. Tích hợp vào GraphQL server của chúng ta.<a id="integrate"></a>
+
+#### a. Update datamodel <a id="datamodel"></a>
+
+- Update lại schema `User` trong file **prisma-db/datamodel.prisma**
+
+```diff
+type User {
+  id: ID! @id
+  name: String!
++ age: Int
++ friends: [User]
 }
 ```
 
-- Kiểm tra mảng có được update bằng câu query **users**.
+- Deploy lại Prisma
 
-```graphql
-query {
-  users {
-    id
-    name
-    age
-  }
-}
+```
+prisma deploy
 ```
 
-- Test với id khác và với id không tồn tại trong mảng.
+Check lại tại trang Prisma Admin
+![](./image/prisma_redeploy.png)
 
-### 3. Bài tập thực hành <a id="btM"></a>
+- Bởi vì chúng ta vừa mới update lại datamodel của Prisma nên cần phải generate lại Prisma Client.
 
-- Viết câu mutation cho tính năng thêm mới user. (Thêm vào mảng users)
-- Viết câu mutation cho tính năng xoá user. (Xóa khỏi mảng users)
-
-<hr>
-
-## II. Subscription: <a id="subscription"></a>
-
-### 1. Khái niệm: <a id="def_subs"></a>
-
-- Subscription là một tính năng của GraphQL, thường được implement bằng [WebSocket](https://viblo.asia/p/websocket-la-gi-Ljy5VxkbZra) để giữ sự kết nối giữa realtime server và client qua đó cho phép Server có thể gửi data cho client.
-
-- Subscription cho phép chúng ta theo dõi (subscribe) sự thay đổi của data và gửi trả data mới cho client.
-
-> Ví dụ: Bạn viết comment trên 1 bài post của Facebook, nghĩa là bạn đã subscribe comment của chính mình. Khi có bất cứ ai reply lại comment của bạn, server sẽ gửi thông báo và dữ liệu về reply đó cho phía client.
-
-### 2. Thực hành: <a id="use_subs"></a>
-
-#### A. Basic
-
-Chúng ta sẽ viết 1 Subscription đơn giản trước. Subscription này sẽ đếm số giây từ khi client liên kết với Server.
-
-- Step 1: Thêm type Subcription vào Schema trong file **src/schema.js**
-
-```graphql
-type Subscription {
-  count: Int!
-}
+```
+prisma generate
 ```
 
-- Step 2: Implement function resolver trong file **scr/resovler.js**
+Hoặc có thể setup tại `prisma.yml` để auto generate khi deploy:
 
-```javascript
-// Import module PubSub (Public Subcribe) để hỗ trợ cho subcription.
-import { PubSub } from "apollo-server";
-// Khởi tạo pubsub
-const pubsub = new PubSub();
+```yml
+hooks:
+  post-deploy:
+    - prisma generate
+```
 
+#### b. Add Prisma vào context của GraphQL server <a id="context"></a>
+
+- Update file `src/index.js`
+
+```diff
+    import { ApolloServer } from "apollo-server";
+    import typeDefs from "./schema";
+    import resolvers from "./resolvers";
++   import { prisma } from "../prisma-db/generated/prisma-client";
+
+
+    const server = new ApolloServer({
+        typeDefs,
+        resolvers,
++       context: req => ({
++          prisma
++      })
++   });
+
+server.listen().then(({ url }) => {
+  console.log(`🚀  Server ready at ${url}`);
+});
+```
+
+🌟**Context** là đối tượng được chia sẻ cho tất cả các hàm resolver của GraphQL. Context thường được dùng để chứa những thứ dùng chung cho tất cả các query, muation như: authentication, current user, database connect, datasource ...
+
+- Chúng ta phải cài thêm thư viện Prisma cho GraphQL server
+  Chạy lệnh để cài đặt
+
+```shell
+npm install --save prisma-client-lib
+```
+
+#### c. Query với Prisma <a id="query"></a>
+
+- Ở các bài trước, chúng ta sử dụng một mảng local nằm trong file để chứa dữ liệu. Lần này chúng ta sẽ update lại các hàm resolver để tương tác thực sự với demo database bằng Prisma
+  <br>
+
+- Update lại query **users** trong file `src/resolver.js`
+
+```diff
+const resolvers = {
+    Query: {
+-       users: (root, args, context, info) => users
++       users: (root, args, context, info) => {
++           return context.prisma.users();
++       }
+    },
+```
+
+#### d. Mutation với Prisma <a id="mutation"></a>
+
+- Update lại query **createUser** trong file `src/resolver.js`
+
+```diff
 const resolvers = {
   Query: {
     users: (root, args, context, info) => users
   },
   Mutation: {
-    ...
-  },
-  Subscription: {
-    // Map với tên Subscription ở schema
-    count: {
+    createUser: (root, args, context, info) => {
+-     // Tạo mới User
+-     let newUser = {
+-       id: users.length + 1,
+-       ...args.input
+-     };
+-     // Thêm vào mảng User
+-     users.push(newUser);
+-     pubsub.publish('CREATE_USER', { createUser: newUser });
+-     return newUser;
++     return context.prisma
++       .createUser({
++         ...args.input
++       })
++       .then(newUser => {
++         pubsub.publish(`CREATE_USER`, {
++           createUser: newUser
++         });
++         return newUser;
++       });
+   }
+
+```
+
+🌟 Bạn có thể thấy, dựa vào datamodel chúng ta khai báo trong file `datamodel.prisma` Prisma khởi tạo cho chúng ta những hàm CRUD để sử dụng ví dụ: _createUser_, _updateUser_...
+
+<br/>
+
+- Start server và test lại mutation createUser
+  - Thử request mutation createUser
+  - Check dữ liệu trên demo database bằng trang Prisma Admin
+
+#### e. Subscription với Prisma <a id="sub"></a>
+
+- Bạn có thể thấy với ví dụ của mutation ở trên, chúng ta có thể sử dụng subscription trong Prisma bằng cách gọi hàm `pubsub.publish` trong method `then()` để gửi notification cho subscription đang lắng nghe. Như cách bình thường ở bài trước [(quên thì xem tại đây)](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson3#subscription)
+  <br>
+- 🍎 Ngoài ra Prisma còn cung cấp cho chúng ta một cách khác để sử dụng Subscription. Là sử dụng `$subscribe`._tên_model_ Với cách này chúng ta không cần mutation phải gọi hàm `pubsub.publish` để gửi notification nữa. Ví dụ:
+
+  ```javascript
+  // Thông báo khi tạo mới User
+  createUser: {
       subscribe: (root, args, context, info) => {
-        let countData = 0;
-
-        // asyncIterator là function dùng để listen event async.
-        // Tham số "Count-LabelEvent" là label của event mình muốn listen.
-        return pubsub.asyncIterator('Count-LabelEvent');
+          return context.prisma.$subscribe.user().node();
+      },
+      resolve: (payload, args, context, info) => {
+          return payload;
       }
-    }
   }
-};
-```
+  // Thông báo khi Update/Delete User với điều kiện age > 20
+  updateUser: {
+      subscribe: (root, args, context, info) => {
+          return context.prisma.$subscribe.user({
+              where: {
+                  mutation_in: ["DELETED", "UPDATED"]
+                  age_gt: 20
+              }
+          }).node();
+      },
+      resolve: (payload, args, context, info) => {
+          return payload;
+      }
+  }
+  ```
 
-- Step 3: Check thử với playground: http://localhost:4000/
-  ![](./image/subbasic.png)
-  Bạn sẽ thấy kết nối giữa client và server đã được thành lập. Và xuất hiện dòng chữ `listening...`
+#### ⚠️ Phần Subscription này mang tính chất nâng cao, mục đích chỉ để bạn biết được Prisma có hỗ trợ Subscription rất tốt. Bạn vẫn có thể sử dụng Subscription theo kiểu cũ:
 
-<br>
+- `subscription` lắng nghe event.
+- `mutation` gửi notification cho subscription.
 
-- Step 4: Send notice tới event. Update resolver trong file src/resolver.js như sau:
+---
 
-```javascript
-count: {
-  subscribe: (root, args, context, info) => {
-    let count = 0;
-    // Dùng interval để mỗi giây chúng ta notice 1 lần.
-    setInterval(() => {
-      countData++;
-      // publish là function dùng để send notice tới event mà hàm asyncIterator đang lắng nghe. Ở đây là event "Count-LabelEvent".
-      // Ở đây cứ mỗi giây chúng ta send notice 1 lần với data là biến count
-      pubsub.publish("Count-LabelEvent", {
-        count: countData
-      });
-    }, 1000);
-    // asyncIterator là function dùng để lắng nghe event async.
-    // Tham số "count" là label của event mình muốn listen. (tự mình đặt: abc, xyz gì cũng OK)
-    return pubsub.asyncIterator("Count-LabelEvent");
-  };
-}
-```
+### 3. Bài tập <a id="homework"></a>
 
-- Step final: Check lại với playground.
-  Expected: cứ mỗi 1 giây, dữ liệu sẽ được trả về.
+- Sử dụng Prisma để viết lại mutation updateUser và deleteUser
+  Có thể tham khảo các hàm của Prisma [tại đây](https://github.com/prisma/rfcs/blob/new-ts-client-rfc/text/0000-new-ts-client.md#basic-queries)
 
-#### B. Subcription event updateUser:
+---
 
-- Step 1: Thêm schema:
+## III. Tại sao nên sử dụng? <a id="why"></a>
 
-```graphql
-type Subscription {
-  count: Int!
-  updateUser(userId: ID!): User!
-}
-```
+1. Simple database workflows
 
-- Step 2: Implement function resolver cho subcription:
+1. A realtime layer for your database
 
-```javascript
-count: {...
-},
-updateUser: {
-    subscribe: (root, args, context, info) => {
-        // Kiểm tra sự tồn tại của user
-        const userIndex = users.findIndex(user => user.id == args.userId);
+1. End-to-end type safety
 
-        // Trả về lỗi nếu không tồn tại
-        if (userIndex === -1) {
-            throw new Error("User not found!");
-        }
-        // Chúng ta sẽ lắng nghe event update tới userId nhất định.
-        // Bằng cách đặt tên event theo userId như sau.
-        return pubsub.asyncIterator(`UPDATE_USER_${args.userId}`);
-    }
-}
-```
+1. Clean and layered architecture
 
-- Step 3: Send notice tới event mỗi khi thực hiện mutation updateUser. Update mutation updateUser trong file src/resolver.js
+Sau khi thực hành và đọc đến đây,
 
-```javascript
-updateUser: (root, args, context, info) => {
-    // Kiểm tra sự tồn tại của user
-    const userIndex = users.findIndex(user => user.id == args.id);
+nếu bạn chưa hiểu tại sao nên sử dụng Prisma, xin hãy tham khảo thêm [tại đây! :muscle:](https://www.prisma.io/docs/understand-prisma/prisma-introduction-what-why-how-j9ff/#why-use-prisma)
 
-    // Trả về lỗi nếu không tồn tại
-    if (userIndex === -1) {
-    throw new Error("User not found!");
-    }
-
-    // Tiến hành update user trong mảng.
-    users[userIndex].age = args.age;
-    users[userIndex].name = args.name;
-    // Send notice tới event đang được subscription theo id
-    pubsub.publish(`UPDATE_USER_${args.id}`, { updateUser: users[userIndex] });
-    // Trả user đã update về lại cho client
-    return users[userIndex];
-};
-```
-
-- Step final: Check lại với playground.
-  - run Subscription **updateUser** để thành lập kết nối.
-  - run Mutation **updateUser** ở tab mới
-  - check lại tab  Subscription. Expected: là dữ liệu update mới được trả về cho subscription.
-
-
-### 3. Bài Tập: <a id="btS"></a>
-- Viết subscription cho Mutation CreateUser và DeleteUser.
-
-
-## III. Mục tiêu cần đạt: <a id="summary"></a>
- - Hiểu và làm được mutation + subscription.
- - Làm được bài tập.
+:apple: Happy coding!
