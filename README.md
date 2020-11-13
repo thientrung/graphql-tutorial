@@ -70,7 +70,7 @@ Performance|- Bởi vì cho phép client tùy ý lấy các field mong muốn, n
 
  **2. Clone this repository into local**
  ```shell
-git clone https://github.com/vitalifyjp/vfa-workshop-graphql-apollo.git
+git clone https://github.com/thientrung/vfa-workshop-graphql-apollo.git
  ```
 
  **3. Install package**
