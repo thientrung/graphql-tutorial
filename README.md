@@ -11,7 +11,7 @@
 ![](./image/prisma.png)
 
 > Về cơ bản: **Prisma** là một GraphQL **ORM** [(ORM là gì có thể tìm hiểu tại đây)](https://stackjava.com/uncategorized/orm-la-gi-tong-quan-ve-orm-framework.html).
-> Là cây cầu kết nối giữa **database** và **resolver** function của GraphQL [(nếu quên resolver function là gì thì ôn lại bài tại đây)](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson2#2-resolver-)
+> Là cây cầu kết nối giữa **database** và **resolver** function của GraphQL [(nếu quên resolver function là gì thì ôn lại bài tại đây)](https://github.com/thientrung/graphql-tutorial/tree/lesson2#2-resolver-)
 
 > Prisma tuyên bố: "Prisma thay thế ORMs truyền thống!"
 
