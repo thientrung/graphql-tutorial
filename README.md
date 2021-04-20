@@ -15,7 +15,7 @@ Table of contents
 ## I. Authenticate <a id="Authenticate"></a>
 
 ### 1. Bối cảnh: <a id="bc"></a>
-- Ở bài trước [(Xem lại tại đây)](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson4) chúng ta đã setup Prisma để có thể lưu trữ database.
+- Ở bài trước [(Xem lại tại đây)](https://github.com/thientrung/graphql-tutorial/tree/lesson4) chúng ta đã setup Prisma để có thể lưu trữ database.
 
 - Bạn có thể thấy chúng ta có 2 điểm có thể truy cập để query và update database:
   - URL của GraphQL server: http://localhost:4000/
@@ -104,7 +104,7 @@ exports.Prisma = prisma_lib_1.makePrismaClientClass({
 });
 ```
 
-- Sau khi chúng ta update prisma.yml và deploy thì cần generate lại client. Nhưng chúng ta đã setup auto generate khi prisma deploy ở bài trước [(tại đây)](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson4#a-update-datamodel-) nên field `secret` đã được tự động thêm vào.
+- Sau khi chúng ta update prisma.yml và deploy thì cần generate lại client. Nhưng chúng ta đã setup auto generate khi prisma deploy ở bài trước [(tại đây)](https://github.com/thientrung/graphql-tutorial/tree/lesson4#datamodel) nên field `secret` đã được tự động thêm vào.
 
 - GraphQL Server sử dụng prisma-client nên sẽ có được key secret để tương tác với Prisma.
 
