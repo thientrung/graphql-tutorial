@@ -35,7 +35,7 @@ _|_|_|_
  - **Resolvers**: implement logic cho API. Resolver có thể gọi câu truy vấn đến DB thông qua ORM, hoặc có thể gọi đến 1 API khác tùy ý. Tùy thuộc vào nghiệp vụ xử lý.
 
 
- > Nếu tại đây bạn vẫn thắc mắc concept này có không có gì khác biệt so với RESTful thì có thể xem lại [so sánh giữa RESTful và GraphQL ở đây](https://github.com/thientrung/graphql-tutorial/tree/lesson1/courses/DAY1.md#sosanh).
+ > Nếu tại đây bạn vẫn thắc mắc concept này có không có gì khác biệt so với RESTful thì có thể xem lại [so sánh giữa RESTful và GraphQL ở đây](https://github.com/thientrung/graphql-tutorial/tree/lesson1#2-so-s%C3%A1nh-gi%E1%BB%AFa-restful-v%C3%A0-graphql).
 ----
 
  ## II. Các khái niệm cơ bản trong GraphQL  <a id="type"></a>:
@@ -150,7 +150,7 @@ const resolvers = {
 
 
 ## III. Thực hành Query <a id="query"></a>:
-Trước khi bắt đầu thực hành, xin nhắc lại cấu trúc thư mục được chia làm 2 phần `bai-tap` và `tham-khao` ([chi tiết xem tại đây](https://github.com/thientrung/graphql-tutorial/tree/lesson1/README.md#3-th%E1%BB%B1c-h%C3%A0nh-%C4%91%C6%B0%E1%BB%A3c-hello-world))
+Trước khi bắt đầu thực hành, xin nhắc lại cấu trúc thư mục được chia làm 2 phần `bai-tap` và `tham-khao` ([chi tiết xem tại đây](https://github.com/thientrung/graphql-tutorial/tree/lesson1#iii-hello-world))
 
 <br>
 
