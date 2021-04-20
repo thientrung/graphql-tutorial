@@ -335,7 +335,7 @@ const resolvers = {
 
 #### e. Subscription với Prisma <a id="sub"></a>
 
-- Bạn có thể thấy với ví dụ của mutation ở trên, chúng ta có thể sử dụng subscription trong Prisma bằng cách gọi hàm `pubsub.publish` trong method `then()` để gửi notification cho subscription đang lắng nghe. Như cách bình thường ở bài trước [(quên thì xem tại đây)](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lesson3#subscription)
+- Bạn có thể thấy với ví dụ của mutation ở trên, chúng ta có thể sử dụng subscription trong Prisma bằng cách gọi hàm `pubsub.publish` trong method `then()` để gửi notification cho subscription đang lắng nghe. Như cách bình thường ở bài trước [(quên thì xem tại đây)](https://github.com/thientrung/graphql-tutorial/tree/lesson3#subscription)
   <br>
 - 🍎 Ngoài ra Prisma còn cung cấp cho chúng ta một cách khác để sử dụng Subscription. Là sử dụng `$subscribe`._tên_model_ Với cách này chúng ta không cần mutation phải gọi hàm `pubsub.publish` để gửi notification nữa. Ví dụ:
 
