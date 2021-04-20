@@ -19,7 +19,7 @@
 
 #### A. Chuẩn bị:
 
-Trước khi bắt đầu thực hành **Mutation**, xin nhắc lại là ở [bài 2 Query](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/tree/lession2#query) lần trước chúng ta đã dùng dữ liệu giả cố định để trả về.
+Trước khi bắt đầu thực hành **Mutation**, xin nhắc lại là ở [bài 2 Query](https://github.com/thientrung/graphql-tutorial/tree/lession2#query) lần trước chúng ta đã dùng dữ liệu giả cố định để trả về.
 
 Lần này thực hành với **Mutation** chúng ta sẽ sử dụng 1 mảng các `User` để thay thế cho 1 database thực tế và để có thể dễ dàng thấy sự thay đổi của data.
 
