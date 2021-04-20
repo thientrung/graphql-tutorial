@@ -104,7 +104,7 @@ exports.Prisma = prisma_lib_1.makePrismaClientClass({
 });
 ```
 
-- Sau khi chúng ta update prisma.yml và deploy thì cần generate lại client. Nhưng chúng ta đã setup auto generate khi prisma deploy ở bài trước [(tại đây)](https://github.com/thientrung/graphql-tutorial/tree/lesson4#datamodel) nên field `secret` đã được tự động thêm vào.
+- Sau khi chúng ta update prisma.yml và deploy thì cần generate lại client. Nhưng chúng ta đã setup auto generate khi prisma deploy ở bài trước [(tại đây)](https://github.com/thientrung/graphql-tutorial/tree/lesson4#a-update-datamodel-) nên field `secret` đã được tự động thêm vào.
 
 - GraphQL Server sử dụng prisma-client nên sẽ có được key secret để tương tác với Prisma.
 
