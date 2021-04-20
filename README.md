@@ -167,7 +167,7 @@ sau khi thành công sẽ nhìn thấy như hình:
 
 ## 3. Bài tập về nhà
 
-Viết câu query `posts` ([tham khảo](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/blob/lesson5/graphql-apollo-tutorial/tham-khao/server/src/resolvers.js#L15-L17)) nhưng có pagination (nhớ seed nhiều nhiều data để còn test nha :smile:)
+Viết câu query `posts` ([tham khảo](https://github.com/thientrung/graphql-tutorial/blob/lesson5/graphql-apollo-tutorial/tham-khao/server/src/resolvers.js#L15)) nhưng có pagination (nhớ seed nhiều nhiều data để còn test nha :smile:)
 
 # <a id="sort">II. Sorting: `orderBy`</a>
 
@@ -268,7 +268,7 @@ sau khi thành công sẽ nhìn thấy như hình:
 
 ## 3. Bài tập về nhà
 
-Viết câu query `posts` ([tham khảo](https://github.com/vitalifyjp/vfa-workshop-graphql-apollo/blob/lesson5/graphql-apollo-tutorial/tham-khao/server/src/resolvers.js#L15-L17)) nhưng có sorting (nhớ seed nhiều nhiều data để còn test nha :smile:)
+Viết câu query `posts` ([tham khảo](https://github.com/thientrung/graphql-tutorial/blob/lesson5/graphql-apollo-tutorial/tham-khao/server/src/resolvers.js#L15)) nhưng có sorting (nhớ seed nhiều nhiều data để còn test nha :smile:)
 
 ⚠️ Chú ý: Endpoint prisma của bạn có thể sẽ khác với trong source bai-tap. Nếu không deploy hay delete được prisma. Mở lại file: `graphql-apollo-tutorial/bai-tap/server/prisma-db/prisma.yml` và update lại endpoint cho đúng.
 
